@@ -19,7 +19,7 @@
       vertical-align: middle;
       background: #e11d48; /* red */
       box-shadow: 0 0 0 1px rgba(0,0,0,.18);
-      flex: 0 0 auto;
+      flex-shrink: 0;
     }
     .snfu-days {
       font-size: 11px;
@@ -27,11 +27,15 @@
       margin-left: 4px;
       font-weight: 600;
       vertical-align: middle;
+      flex-shrink: 0;
     }
-    .snfu-dot-wrap {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+    .snfu-title-row {
+      display: flex !important;
+      align-items: center !important;
+    }
+    .snfu-title-row > :first-child {
+      min-width: 0;
+      flex: 0 1 auto;
     }
   `;
   document.documentElement.appendChild(style);
@@ -175,6 +179,8 @@
       anchor.querySelector("strong") ||
       anchor;
 
+    if (nameEl) nameEl.classList.add("snfu-title-row");
+
     // 1. the dot
     let dot = nameEl.querySelector(":scope > .snfu-dot");
     if (!dot) {
@@ -203,6 +209,8 @@
       anchor.querySelector('[data-anonymize="person-name"]') ||
       anchor.querySelector("strong") ||
       anchor;
+
+    if (nameEl) nameEl.classList.remove("snfu-title-row");
 
     const dot = nameEl.querySelector(":scope > .snfu-dot");
     if (dot) dot.remove();
