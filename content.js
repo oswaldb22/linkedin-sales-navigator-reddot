@@ -1,5 +1,4 @@
 (() => {
-
   // ======== SETTINGS ========
   const FOLLOW_UP_AFTER_DAYS = 1; // <-- change this (e.g., 2, 5, 7)
   // ==========================
@@ -21,6 +20,13 @@
       background: #e11d48; /* red */
       box-shadow: 0 0 0 1px rgba(0,0,0,.18);
       flex: 0 0 auto;
+    }
+    .snfu-days {
+      font-size: 11px;
+      color: #474445ff;
+      margin-left: 4px;
+      font-weight: 600;
+      vertical-align: middle;
     }
     .snfu-dot-wrap {
       display: inline-flex;
@@ -60,7 +66,7 @@
       } catch (e) {
         log("Error saving cache to localStorage", e);
       }
-    }
+    },
   };
 
   function parseTimeTextToAgeMs(t) {
@@ -161,7 +167,7 @@
     });
   }
 
-  function ensureDot(anchor) {
+  function ensureDot(anchor, ageDays) {
     // Find a place to attach dot: prefer a title/name element if present
     const nameEl =
       anchor.querySelector(".artdeco-entity-lockup__title") ||
@@ -169,19 +175,26 @@
       anchor.querySelector("strong") ||
       anchor;
 
-    // Prevent duplicates for this row
-    if (nameEl.querySelector(":scope > .snfu-dot")) return;
-    log("ensureDot", anchor);
+    // 1. the dot
+    let dot = nameEl.querySelector(":scope > .snfu-dot");
+    if (!dot) {
+      dot = document.createElement("span");
+      dot.className = "snfu-dot";
+      dot.title = `No reply for ≥ ${FOLLOW_UP_AFTER_DAYS} days (heuristic)`;
+      nameEl.appendChild(dot);
+    }
 
-    const wrap = document.createElement("span");
-    wrap.className = "snfu-dot-wrap";
+    // 2. the days text
+    let dayLabel = nameEl.querySelector(":scope > .snfu-days");
+    if (!dayLabel) {
+      dayLabel = document.createElement("span");
+      dayLabel.className = "snfu-days";
+      nameEl.appendChild(dayLabel);
+    }
 
-    // Move current name text nodes into wrapper? No — keep minimal: append dot only.
-    const dot = document.createElement("span");
-    dot.className = "snfu-dot";
-    dot.title = `No reply for ≥ ${FOLLOW_UP_AFTER_DAYS} days (heuristic)`;
-
-    nameEl.appendChild(dot);
+    if (ageDays) {
+      dayLabel.innerText = Math.floor(ageDays) + "d";
+    }
   }
 
   function removeDot(anchor) {
@@ -192,10 +205,10 @@
       anchor;
 
     const dot = nameEl.querySelector(":scope > .snfu-dot");
-    if (dot) {
-      log("removeDot", anchor);
-      dot.remove();
-    }
+    if (dot) dot.remove();
+
+    const dayLabel = nameEl.querySelector(":scope > .snfu-days");
+    if (dayLabel) dayLabel.remove();
   }
 
   function scan() {
@@ -254,7 +267,7 @@
         if (convId && cachedStatus) {
           log("Using cached result for", convId, cachedStatus);
           if (cachedStatus.isDue) {
-            ensureDot(anchor);
+            ensureDot(anchor, cachedStatus.ageDays);
           } else {
             removeDot(anchor);
           }
