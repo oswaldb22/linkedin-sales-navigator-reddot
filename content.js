@@ -1,5 +1,4 @@
 (() => {
-  if (!location.pathname.startsWith("/sales/inbox")) return;
 
   // ======== SETTINGS ========
   const FOLLOW_UP_AFTER_DAYS = 1; // <-- change this (e.g., 2, 5, 7)
@@ -33,7 +32,36 @@
 
   // --- helpers ---
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const THREAD_STATUS_CACHE = {};
+  const CACHE_KEY = "snfu_thread_status_cache";
+
+  const cache = {
+    _data: null,
+    load() {
+      if (this._data) return;
+      log("Loading cache from localStorage");
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        this._data = raw ? JSON.parse(raw) : {};
+        log("Cache loaded:", this._data);
+      } catch (e) {
+        log("Error parsing cache from localStorage", e);
+        this._data = {};
+      }
+    },
+    get(key) {
+      this.load();
+      return this._data[key];
+    },
+    set(key, value) {
+      this.load();
+      this._data[key] = value;
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(this._data));
+      } catch (e) {
+        log("Error saving cache to localStorage", e);
+      }
+    }
+  };
 
   function parseTimeTextToAgeMs(t) {
     // Returns age in milliseconds, or null if unknown.
@@ -171,6 +199,7 @@
   }
 
   function scan() {
+    if (!location.pathname.startsWith("/sales/inbox")) return;
     log("scan");
     const root = findThreadListRoot();
     if (!root) {
@@ -199,12 +228,12 @@
           const ageDays = ageMs / DAY_MS;
           const isDue = isFromMe && ageDays >= FOLLOW_UP_AFTER_DAYS;
 
-          THREAD_STATUS_CACHE[activeConvId] = {
+          cache.set(activeConvId, {
             isDue,
             fromMe: isFromMe,
             time: timeText,
             ageDays,
-          };
+          });
           log("Evaluated active thread from detail view:", {
             activeConvId,
             isDue,
@@ -221,9 +250,10 @@
       const convIdMatch = href.match(/sales\/inbox\/(\S+)/);
       if (convIdMatch) {
         const convId = convIdMatch[1];
-        if (convId && THREAD_STATUS_CACHE[convId]) {
-          log("Using cached result for", convId, THREAD_STATUS_CACHE[convId]);
-          if (THREAD_STATUS_CACHE[convId].isDue) {
+        const cachedStatus = cache.get(convId);
+        if (convId && cachedStatus) {
+          log("Using cached result for", convId, cachedStatus);
+          if (cachedStatus.isDue) {
             ensureDot(anchor);
           } else {
             removeDot(anchor);
